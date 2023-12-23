@@ -1,0 +1,127 @@
+image: busybox:latest
+
+stages:
+  - build
+  - test
+  - deploy
+  - stop
+
+variables:
+  IMAGE_TAG: $CI_COMMIT_BRANCH-$CI_COMMIT_SHORT_SHA
+
+cache:
+  key:
+    files:
+      - composer.lock
+  paths:
+    - vendor/
+
+
+before_script:
+  - echo "Before script section"
+  - echo "For example you might run an update here or install a build dependency"
+  - echo "Or perhaps you might print out some debugging details"
+
+after_script:
+  - echo "After script section"
+  - echo "For example you might do some cleanup here"
+
+build1:
+  stage: build
+  script:
+    - echo "Do your build here"
+    - echo one >> house.txt
+    - mkdir -p vendor/
+    - echo "build" > vendor/hello.txt
+
+
+#  artifacts:
+#    paths:
+#     - house.txt
+#    expire_in: 30 days
+
+
+docker build:
+  image: docker:latest
+  stage: build
+  services:
+    - docker:dind
+  script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - echo $CI_REGISTRY_USER $CI_REGISTRY_PASSWORD $CI_REGISTRY $CI_REGISTRY_IMAGE:$IMAGE_TAG
+    - docker build -t $CI_REGISTRY_IMAGE:$IMAGE_TAG .
+    - docker push $CI_REGISTRY_IMAGE:$IMAGE_TAG
+
+
+test1:
+  stage: test
+  resource_group: phone
+  script:
+    - echo "Do a test here"
+    - echo "For example run a test suite"
+#    - sleep 10
+##    - grep one house.txt
+##    - sleep 60
+#    - cat vendor/hello.txt
+
+
+test2:
+  stage: test
+  script:
+    - echo "Do another parallel test here"
+    - echo "For example run a lint test"
+    
+
+deploy to preprod:
+    stage: deploy
+    variables:
+        MY_LOGIN: login-preprod
+    script:
+        - echo "Login '${MY_LOGIN}', Password '${MY_PASSWORD}'"
+    only:
+        - main
+    environment:
+        name: preprod
+        on_stop: stop to preprod
+        auto_stop_in: 1 day
+
+stop to preprod:
+    stage: stop
+    variables:
+        MY_LOGIN: login-preprod
+    script:
+        - echo "STOP ${MY_LOGIN}"
+    only:
+        - main
+    when: manual
+    environment:
+        name: preprod
+        action: stop
+
+deploy to production:
+    stage: deploy
+    variables:
+        MY_LOGIN: login-prodaction
+    script:
+        - echo "Login '${MY_LOGIN}', Password '${MY_PASSWORD}'"
+    only:
+        - main
+    when: manual
+    environment:
+        name: production
+
+
+pages:
+    stage: deploy
+    script:
+        - mkdir -p public
+        - cp vendor/hello.txt public/index.html
+        - echo 404 >> public/404.html
+    artifacts:
+        exclude:
+            - public/404.html
+        paths:
+            - public
+    only:
+        - main
+        
