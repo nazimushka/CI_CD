@@ -1,5 +1,4 @@
 # Default ignored files
 /shelf/
 /workspace.xml
-/txt.txt
-/local-test.yml
+/smoke.gitlab-ci.yml
