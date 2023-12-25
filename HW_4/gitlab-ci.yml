@@ -1,0 +1,65 @@
+image: busybox:latest
+
+stages:
+  - build
+  - test
+  - deploy
+
+variables:
+  IMAGE_TAG: $CI_COMMIT_BRANCH-$CI_COMMIT_SHORT_SHA
+
+
+cache:
+  key:
+    files:
+      - composer.lock
+  paths:
+    - vendor/
+
+
+include:
+  - local: smoke.gitlab-ci.yml
+  - remote: https://gitlab.com/hw_ci_cd1/include_remote/-/raw/main/smoke.gitlab-ci.yml
+
+
+before_script:
+  - echo "Before script section"
+  - echo "For example you might run an update here or install a build dependency"
+  - echo "Or perhaps you might print out some debugging details"
+
+after_script:
+  - echo "After script section"
+  - echo "For example you might do some cleanup here"
+
+build1:
+  stage: build
+  script:
+    - echo "Do your build here"
+    - echo one >> house.txt
+    - mkdir -p vendor/
+    - echo "build" > vendor/hello.txt
+
+
+docker build:
+  image: docker:latest
+  stage: build
+  services:
+    - docker:dind
+  script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - echo $CI_REGISTRY_USER $CI_REGISTRY_PASSWORD $CI_REGISTRY $CI_REGISTRY_IMAGE:$IMAGE_TAG
+    - docker build -t $CI_REGISTRY_IMAGE:$IMAGE_TAG .
+    - docker push $CI_REGISTRY_IMAGE:$IMAGE_TAG
+
+
+test1:
+  stage: test
+  script:
+    - echo "Do another parallel test here"
+    - echo "For example run a lint test"
+
+deploy1:
+  stage: deploy
+  script:
+    - echo "Do your deploy here"
+  environment: production
