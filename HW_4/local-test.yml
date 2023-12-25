@@ -1,3 +1,0 @@
-remote included file job:
-  script:
-    - echo "Remote test"
